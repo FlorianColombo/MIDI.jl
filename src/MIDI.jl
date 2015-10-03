@@ -1,4 +1,4 @@
-module Midi
+module MIDI
 
 include("trackevent.jl")
 include("midievent.jl")

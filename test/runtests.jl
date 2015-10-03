@@ -1,4 +1,4 @@
-using Midi
+using MIDI
 using Base.Test
 
 include("variablelength.jl")
