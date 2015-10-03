@@ -10,4 +10,8 @@ include("midifile.jl")
 include("constants.jl")
 include("variablelength.jl")
 
+@windows ? (
+    include("device/win.jl")
+) : nothing
+
 end
