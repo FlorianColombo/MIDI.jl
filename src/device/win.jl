@@ -1,6 +1,7 @@
 # This file controls streaming midi data to a device on your system. Windows only, until someone wants to port it to other systems and
 # submit a pull request.
 
+const CALLBACK_NULL = uint32(0x00000000)
 
 immutable SZPName
     c1::Uint8
@@ -39,32 +40,22 @@ end
 
 tostring(x::SZPName) = bytestring(pointer(ASCIIString([x.(z) for z in 1:length(names(x))])))
 
-@windows ? (
 type MidiOutCaps
     wMid::Uint16
     wPid::Uint16
     vDriverVersion::Uint32
-    szPname::SZPName
+    szPname::NTuple{32, Uint8}
     wTechnology::Uint16
     wVoices::Uint16
     wNotes::Uint16
     wChannelMask::Uint16
     dwSupport::Uint32
 
-    MidiOutCaps() = new(0, 0, 0,
-        SZPName(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
-        0, 0, 0, 0, 0)
+    #MidiOutCaps() = new(0, 0, 0,        SZPName(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),        0, 0, 0, 0, 0)
+    MidiOutCaps() = new(0, 0, 0,  ntuple(x -> 0, 32), 0, 0, 0, 0, 0)
 end
-:
-nothing
-)
-
 
 function getoutputdevices()
-    @windows ? getoutputdeviceswindows() : ""
-end
-
-function getoutputdeviceswindows()
     numberofdevices = ccall( (:midiOutGetNumDevs, :Winmm), stdcall, Int32, ())
     name = Array(Uint8, 32)
 
@@ -79,17 +70,27 @@ function getoutputdeviceswindows()
     results
 end
 
-const CALLBACK_NULL = uint32(0x00000000)
+
 function openoutputdevice(id::Uint32)
-    handle = uint32(0)
+    handle = 0x00000001
 
     err = ccall((:midiOutOpen, :Winmm), stdcall,
         Uint32,
         (Ptr{Uint32}, Uint32, Ptr{Uint32}, Ptr{Uint32}, Uint32),
         &handle, id, C_NULL, C_NULL, CALLBACK_NULL)
 
-    println(hex(err))
+    println(hex(err, 4))
+    println(hex(handle, 4))
     handle
+end
+
+function closeoutputdevice(id::Uint32)
+    handle = uint32(0)
+
+    ccall((:midiOutClose, :Winmm), stdcall,
+        Uint32,
+        (Uint32,),
+        id)
 end
 
 
@@ -106,10 +107,3 @@ end
 function initstream(device)
 
 end
-
-
-@windows ? (
-    true
-    :
-    false
-)
