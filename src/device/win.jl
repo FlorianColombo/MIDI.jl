@@ -41,15 +41,15 @@ end
 tostring(x::SZPName) = bytestring(pointer(ASCIIString([x.(z) for z in 1:length(names(x))])))
 
 type MidiOutCaps
-    wMid::Uint16
-    wPid::Uint16
-    vDriverVersion::Uint32
-    szPname::NTuple{32, Uint8}
-    wTechnology::Uint16
-    wVoices::Uint16
-    wNotes::Uint16
-    wChannelMask::Uint16
-    dwSupport::Uint32
+    wMid::UInt16
+    wPid::UInt16
+    vDriverVersion::UInt32
+    szPname::NTuple{32, UInt8}
+    wTechnology::UInt16
+    wVoices::UInt16
+    wNotes::UInt16
+    wChannelMask::UInt16
+    dwSupport::UInt32
 
     #MidiOutCaps() = new(0, 0, 0,        SZPName(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),        0, 0, 0, 0, 0)
     MidiOutCaps() = new(0, 0, 0, ntuple(x -> 0, 32), 0, 0, 0, 0, 0)
@@ -84,12 +84,12 @@ function openoutputdevice(id::UInt32)
     handle
 end
 
-function closeoutputdevice(id::Uint32)
+function closeoutputdevice(id::UInt32)
     handle = uint32(0)
 
     ccall((:midiOutClose, :Winmm), stdcall,
-        Uint32,
-        (Uint32,),
+        UInt32,
+        (UInt32,),
         id)
 end
 
