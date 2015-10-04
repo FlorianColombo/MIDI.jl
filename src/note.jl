@@ -1,11 +1,13 @@
-# Fields should be self-explanatory. Position is an absolute time (in ticks) within the track. 
+import Base.+, Base.-, Base.==
+
+# Fields should be self-explanatory. Position is an absolute time (in ticks) within the track.
 # Please note that velocity cannot be higher than 127 (0x7F).
 type Note
-    value::Uint8
-    duration::Uint64
-    position::Uint64
-    channel::Uint8
-    velocity::Uint8
+    value::UInt8
+    duration::UInt64
+    position::UInt64
+    channel::UInt8
+    velocity::UInt8
 
     Note(value, duration, position, channel, velocity=0x7F) =
         if channel > 0x7F

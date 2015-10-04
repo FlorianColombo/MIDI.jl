@@ -3,53 +3,53 @@
 
 
 immutable SZPName
-    c1::Uint8
-    c2::Uint8
-    c3::Uint8
-    c4::Uint8
-    c5::Uint8
-    c6::Uint8
-    c7::Uint8
-    c8::Uint8
-    c9::Uint8
-    c10::Uint8
-    c11::Uint8
-    c12::Uint8
-    c13::Uint8
-    c14::Uint8
-    c15::Uint8
-    c16::Uint8
-    c17::Uint8
-    c18::Uint8
-    c19::Uint8
-    c20::Uint8
-    c21::Uint8
-    c22::Uint8
-    c23::Uint8
-    c24::Uint8
-    c25::Uint8
-    c26::Uint8
-    c27::Uint8
-    c28::Uint8
-    c29::Uint8
-    c30::Uint8
-    c31::Uint8
-    c32::Uint8
+    c1::UInt8
+    c2::UInt8
+    c3::UInt8
+    c4::UInt8
+    c5::UInt8
+    c6::UInt8
+    c7::UInt8
+    c8::UInt8
+    c9::UInt8
+    c10::UInt8
+    c11::UInt8
+    c12::UInt8
+    c13::UInt8
+    c14::UInt8
+    c15::UInt8
+    c16::UInt8
+    c17::UInt8
+    c18::UInt8
+    c19::UInt8
+    c20::UInt8
+    c21::UInt8
+    c22::UInt8
+    c23::UInt8
+    c24::UInt8
+    c25::UInt8
+    c26::UInt8
+    c27::UInt8
+    c28::UInt8
+    c29::UInt8
+    c30::UInt8
+    c31::UInt8
+    c32::UInt8
 end
 
 tostring(x::SZPName) = bytestring(pointer(ASCIIString([x.(z) for z in 1:length(names(x))])))
 
 @windows ? (
 type MidiOutCaps
-    wMid::Uint16
-    wPid::Uint16
-    vDriverVersion::Uint32
+    wMid::UInt16
+    wPid::UInt16
+    vDriverVersion::UInt32
     szPname::SZPName
-    wTechnology::Uint16
-    wVoices::Uint16
-    wNotes::Uint16
-    wChannelMask::Uint16
-    dwSupport::Uint32
+    wTechnology::UInt16
+    wVoices::UInt16
+    wNotes::UInt16
+    wChannelMask::UInt16
+    dwSupport::UInt32
 
     MidiOutCaps() = new(0, 0, 0,
         SZPName(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
@@ -66,13 +66,13 @@ end
 
 function getoutputdeviceswindows()
     numberofdevices = ccall( (:midiOutGetNumDevs, :Winmm), stdcall, Int32, ())
-    name = Array(Uint8, 32)
+    name = Array(UInt8, 32)
 
-    results = (String, Uint16, Uint16)[]
+    results = (AbstractString, UInt16, UInt16)[]
 
     for i in [0:numberofdevices-1]
         output_struct = MidiOutCaps()
-        err = ccall( (:midiOutGetDevCapsA, :Winmm), stdcall, Uint32, (Ptr{Uint32}, Ptr{MidiOutCaps}, Uint32), i, &output_struct, sizeof(output_struct))
+        err = ccall( (:midiOutGetDevCapsA, :Winmm), stdcall, UInt32, (Ptr{UInt32}, Ptr{MidiOutCaps}, UInt32), i, &output_struct, sizeof(output_struct))
         push!(results, (tostring(output_struct.szPname), output_struct.wMid, output_struct.wPid))
     end
 
@@ -80,12 +80,12 @@ function getoutputdeviceswindows()
 end
 
 const CALLBACK_NULL = uint32(0x00000000)
-function openoutputdevice(id::Uint32)
+function openoutputdevice(id::UInt32)
     handle = uint32(0)
 
     err = ccall((:midiOutOpen, :Winmm), stdcall,
-        Uint32,
-        (Ptr{Uint32}, Uint32, Ptr{Uint32}, Ptr{Uint32}, Uint32),
+        UInt32,
+        (Ptr{UInt32}, UInt32, Ptr{UInt32}, Ptr{UInt32}, UInt32),
         &handle, id, C_NULL, C_NULL, CALLBACK_NULL)
 
     println(hex(err))
