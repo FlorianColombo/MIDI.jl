@@ -57,14 +57,20 @@ end
 
 function getoutputdevices()
     numberofdevices = ccall( (:midiOutGetNumDevs, :Winmm), stdcall, Int32, ())
-    name = Array(UInt8, 32)
+    results = Array(Any, 0)
 
-    results = (AbstractString, UInt16, UInt16)[]
-
-    for i in [0:numberofdevices-1]
-        output_struct = MidiOutCaps()
-        err = ccall( (:midiOutGetDevCapsA, :Winmm), stdcall, UInt32, (Ptr{UInt32}, Ptr{MidiOutCaps}, UInt32), i, &output_struct, sizeof(output_struct))
-        push!(results, (tostring(output_struct.szPname), output_struct.wMid, output_struct.wPid))
+    for i in [0:numberofdevices-1;]
+        output_struct = Ref{MidiOutCaps}(MidiOutCaps())
+        err = ccall(
+            (:midiOutGetDevCapsA, :Winmm),
+            stdcall,
+            UInt32,
+            (Ptr{UInt32}, Ref{MidiOutCaps}, UInt32),
+            Ptr{UInt32}(i), # Why Ptr instead of ref?
+            output_struct,
+            sizeof(output_struct[])
+        )
+        push!(results, (bytestring(Ptr{Cchar}(pointer_from_objref(output_struct[].szPname))), output_struct[].wMid, output_struct[].wPid))
     end
 
     results
@@ -72,15 +78,15 @@ end
 
 const CALLBACK_NULL = uint32(0x00000000)
 function openoutputdevice(id::UInt32)
-    handle = 0x00000001
+    handle = Ref{Cint}(1)
 
     err = ccall((:midiOutOpen, :Winmm), stdcall,
         UInt32,
-        (Ptr{UInt32}, UInt32, Ptr{UInt32}, Ptr{UInt32}, UInt32),
-        &handle, id, C_NULL, C_NULL, CALLBACK_NULL)
+        (Ref{Cint}, UInt32, Ptr{UInt32}, Ptr{UInt32}, UInt32),
+        Ref{Cint}(handle), id, C_NULL, C_NULL, CALLBACK_NULL)
 
     println(hex(err, 4))
-    println(hex(handle, 4))
+    println(hex(handle[], 4))
     handle
 end
 
