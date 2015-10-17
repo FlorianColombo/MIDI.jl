@@ -58,6 +58,45 @@ function closeoutputdevice(id::UInt32)
         id)
 end
 
+function writeMidiEvent(handle::UInt32, event::MIDIEvent)
+
+    message = UInt32(0)
+
+    status = UInt32(event.status)
+
+
+
+    data = event.data
+    if length(data) == 2
+        println( "branch1, message is ")
+        println(hex(message, 4))
+        message = message | data[2]
+        println(hex(message, 4))
+        message = message << 8
+        message = message | data[1]
+        println(hex(message, 4))
+    elseif length(data) == 1
+        println(" Branch2")
+        message = message | data[1]
+        println(hex(message, 4))
+    else
+        println("ERROR, shouldn't be here")
+        return "ERROR"
+    end
+
+    message = message << 8
+    message = message | status
+
+    println(hex(message, 8))
+
+    # https://msdn.microsoft.com/en-us/library/dd798481(v=vs.85).aspx
+    result = ccall((:midiOutShortMsg, :Winmm), stdcall, UInt32, (UInt32, UInt32), handle, message)
+
+    return result
+end
+
+testeventon = MIDIEvent(0, 0b10010000, [60, 127])
+testeventoff = MIDIEvent(0, 0b10000000, [60, 127])
 
 #=
     MMRESULT midiOutOpen(
