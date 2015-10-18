@@ -11,6 +11,7 @@ include("constants.jl")
 include("variablelength.jl")
 
 @windows ? (
+    include("device/device.jl"),
     include("device/win.jl")
 ) : nothing
 

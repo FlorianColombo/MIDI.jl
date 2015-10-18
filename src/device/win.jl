@@ -1,9 +1,16 @@
-# This file controls streaming midi data to a device on your system. Windows only, until someone wants to port it to other systems and
-# submit a pull request.
-
 const CALLBACK_NULL = UInt32(0x00000000)
 
-type MidiOutCaps
+type WinMIDIDevice <: MIDIDevice
+    # "Public" attributes
+    name::AbstractString
+    laststatus::UInt8 # The previous status byte written to this device
+    isopen::Bool
+    # "Private" attributes - platform specific, should not be referenced by the end-user.
+    _devid::UInt32
+    _handle::UInt32
+end
+
+type _MidiOutCaps
     wMid::UInt16
     wPid::UInt16
     vDriverVersion::UInt32
@@ -14,100 +21,84 @@ type MidiOutCaps
     wChannelMask::UInt16
     dwSupport::UInt32
 
-    MidiOutCaps() = new(0, 0, 0, ntuple(x -> 0, 32), 0, 0, 0, 0, 0)
+    _MidiOutCaps() = new(0, 0, 0, ntuple(x -> 0, 32), 0, 0, 0, 0, 0)
 end
 
 function getoutputdevices()
     numberofdevices = ccall( (:midiOutGetNumDevs, :Winmm), stdcall, Int32, ())
-    results = Array(Any, 0)
+    results = Array(WinMIDIDevice, 0)
 
     for i in [0:numberofdevices-1;]
-        output_struct = Ref{MidiOutCaps}(MidiOutCaps())
+        output_struct = Ref{_MidiOutCaps}(_MidiOutCaps())
         err = ccall(
             (:midiOutGetDevCapsA, :Winmm),
             stdcall,
             UInt32,
-            (Ptr{UInt32}, Ref{MidiOutCaps}, UInt32),
-            Ptr{UInt32}(i), # Why Ptr instead of ref?
+            (Ptr{UInt32}, Ref{_MidiOutCaps}, UInt32),
+            Ptr{UInt32}(i),
             output_struct,
             sizeof(output_struct[])
         )
-        push!(results, (bytestring(Ptr{Cchar}(pointer_from_objref(output_struct[].szPname))), output_struct[].wMid, output_struct[].wPid))
+
+        name = bytestring(Ptr{Cchar}(pointer_from_objref(output_struct[].szPname)))
+        push!(results, WinMIDIDevice(name, 0x00, false, i, 0))
     end
 
     results
 end
 
-function openoutputdevice(id::UInt32)
-    handle = Ref{Cint}(1)
+function openoutputdevice(device::WinMIDIDevice)
+    handle = Ref{Cint}(0)
 
     err = ccall((:midiOutOpen, :Winmm), stdcall,
         UInt32,
         (Ref{Cint}, UInt32, Ptr{UInt32}, Ptr{UInt32}, UInt32),
-        handle, id, C_NULL, C_NULL, CALLBACK_NULL)
+        handle, device._devid, C_NULL, C_NULL, CALLBACK_NULL)
 
-    return (UInt32(handle[]), err)
+    device._handle = handle[]
+    device.isopen = true
+
+    return device
 end
 
-function closeoutputdevice(id::UInt32)
-    handle = UInt32(0)
-
+function closeoutputdevice(device::WinMIDIDevice)
     ccall((:midiOutClose, :Winmm), stdcall,
         UInt32,
         (UInt32,),
-        id)
+        device._handle)
+
+    device.isopen = false
+    device._handle = 0
+
+    return device
 end
 
-function writeMidiEvent(handle::UInt32, event::MIDIEvent)
-
+function writeMidiEvent(device::WinMIDIDevice, event::MIDIEvent)
     message = UInt32(0)
-
     status = UInt32(event.status)
-
-
-
     data = event.data
-    if length(data) == 2
-        println( "branch1, message is ")
-        println(hex(message, 4))
-        message = message | data[2]
-        println(hex(message, 4))
-        message = message << 8
-        message = message | data[1]
-        println(hex(message, 4))
-    elseif length(data) == 1
-        println(" Branch2")
-        message = message | data[1]
-        println(hex(message, 4))
-    else
+
+    if length(data) == 0
+        # TODO: Handle error case
         println("ERROR, shouldn't be here")
         return "ERROR"
     end
 
+    if length(data) == 2
+        message = message | data[2]
+        message = message << 8
+    end
+
+    message = message | data[1]
     message = message << 8
     message = message | status
 
-    println(hex(message, 8))
-
     # https://msdn.microsoft.com/en-us/library/dd798481(v=vs.85).aspx
-    result = ccall((:midiOutShortMsg, :Winmm), stdcall, UInt32, (UInt32, UInt32), handle, message)
+    result = ccall((:midiOutShortMsg, :Winmm), stdcall, UInt32, (UInt32, UInt32), device._handle, message)
 
+    # TODO: Handle errors in a platform agnostic manner
     return result
 end
 
 testeventon = MIDIEvent(0, 0b10010000, [60, 127])
 testeventoff = MIDIEvent(0, 0b10000000, [60, 127])
-
-#=
-    MMRESULT midiOutOpen(
-        LPHMIDIOUT lphmo, // 32?
-        UINT       uDeviceID,
-        DWORD_PTR  dwCallback,
-        DWORD_PTR  dwCallbackInstance,
-        DWORD      dwFlags
-   );
-=#
-
-function initstream(device)
-
-end
