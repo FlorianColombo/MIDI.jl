@@ -12,10 +12,6 @@ function isdatabyte(b::UInt8)
     !isstatusbyte(b)
 end
 
-function isMIDIevent(b::UInt8)
-    !ismetaevent(b) && !issysexevent(b)
-end
-
 function channelnumber(m::MIDIEvent)
     0x0F & m.status
 end

@@ -4,13 +4,8 @@ type MetaEvent <: TrackEvent
     data::Array{UInt8,1}
 end
 
-function ismetaevent(b::UInt8)
-    b == 0xFF
-end
-
 function readmetaevent(dT::Int64, f::IO)
-    # Meta events are 0xFF - type (1 byte) - variable length data length - data bytes
-    skip(f, 1) # Skip the 0xff that starts the event
+    # Meta events are of the form 0xFF - type (1 byte) - variable length data length - data bytes
     metatype = read(f, UInt8)
     datalength = readvariablelength(f)
     data = read(f, UInt8, datalength)

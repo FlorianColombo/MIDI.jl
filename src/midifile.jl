@@ -1,3 +1,5 @@
+using FileIO
+
 type MIDIFile
     format::UInt16 # The format of the file. Can be 0, 1 or 2
     timedivision::Int16 # The time division of the track. Ticks per beat.
@@ -12,8 +14,7 @@ function readMIDIfile(filename::AbstractString)
 
     MIDIfile = MIDIFile()
     # Check that it's a valid MIDI file - first four bytes should spell MThd
-    mthd = join(map(char, read(f, UInt8, 4)))
-    if mthd != MTHD
+    if !checkmagic(f, MTHD)
         error("Not a valid MIDI file. Expected first 4 bytes to spell 'MThd', got $(mthd)")
     end
 

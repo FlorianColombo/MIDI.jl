@@ -11,9 +11,8 @@ type MIDITrack
 end
 
 function readtrack(f::IO)
-    mtrk = join(map(Char, read(f, UInt8, 4)))
-    if mtrk != MTRK
-        error("Not a valid MIDI file. Expected MTrk, got $(mtrk) starting at byte $(hex(position(f)-4, 2))")
+    if !matchbytes(f, MTRK)
+        error("Not a valid MIDI track. Expected to start with MTrk")
     end
     track = MIDITrack()
 
@@ -32,21 +31,15 @@ function readtrack(f::IO)
 
         # Figure out the event type
         # Remember, endianness is byte order, not bit order. No need to ntoh here.
-        event_start = read(f, UInt8)
-        skip(f, -1)
-
-        local event
-        if isMIDIevent(event_start)
-            event = readMIDIevent(dT, f, laststatus)
-            laststatus = event.status
-        elseif issysexevent(event_start)
+        if matchbytes(f, SYSEX)
             event = readsysexevent(dT, f)
             laststatus = UInt8(0)
-        elseif ismetaevent(event_start)
+        elseif matchbytes(f, META)
             event = readmetaevent(dT, f)
             laststatus = UInt8(0)
-        else
-            error("Unrecognized event $(hex(event_start,2))")
+        else 
+            event = readMIDIevent(dT, f, laststatus)
+            laststatus = event.status
         end
         push!(track.events, event)
 
@@ -58,7 +51,8 @@ function readtrack(f::IO)
     if !isa(lastevent, MetaEvent) || lastevent.metatype != METATRACKEND
         error("Invalid track - does not end with track metaevent")
     else
-        # strip the track end event - we don't need to worry about manipulating it
+        # strip the track end event - we don't need to worry about manipulating it, and it will be
+        # rewritten when we write the track
         track.events = track.events[1:length(track.events)-1]
     end
 
